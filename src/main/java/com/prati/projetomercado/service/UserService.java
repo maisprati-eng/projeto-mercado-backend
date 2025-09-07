@@ -14,5 +14,5 @@ public interface UserService {
     
     public JwtToken login(LoginUserRequest loginUserRequest) throws Exception;
 
-    public JwtToken useRefreshToken(String accessToken, UUID refreshTokenId);
+    public JwtToken useRefreshToken(String acessToken, UUID refreshTokenId);
 }

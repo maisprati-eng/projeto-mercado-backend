@@ -72,7 +72,7 @@ public class UserServiceImpl implements UserService {
         var refreshToken = jwtTokenService.generateNewRefreshToken(userDetailsImpl.getAuthUser());
 
         refreshTokenRepository.save(refreshToken);
-        var accessTokenExpirationDate = jwtTokenService.expirationAccessTokenDate();
+        var accessTokenExpirationDate = jwtTokenService.expirationAcessTokenDate();
         var accessToken = jwtTokenService.generateToken(userDetailsImpl.getAuthUser(), accessTokenExpirationDate);
         var accessTokenEntity = AccessToken.builder()
                 .authUser(userDetailsImpl.getAuthUser())
@@ -107,7 +107,7 @@ public class UserServiceImpl implements UserService {
 
         var newRefreshToken = jwtTokenService.generateNewRefreshToken(authuser);
         refreshTokenRepository.save(newRefreshToken);
-        var newAccessTokenExpDate = jwtTokenService.expirationAccessTokenDate();
+        var newAccessTokenExpDate = jwtTokenService.expirationAcessTokenDate();
         var newAccessToken = jwtTokenService.generateToken(authuser, newAccessTokenExpDate);
 
         var accessTokenEntityOld = accessTokenRepository.findByAuthUser(

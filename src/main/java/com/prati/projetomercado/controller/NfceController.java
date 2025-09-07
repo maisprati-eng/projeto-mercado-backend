@@ -10,6 +10,9 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/nfce")
@@ -33,5 +36,14 @@ public class NfceController {
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(e.getMessage());
         }
+    }
+
+    @DeleteMapping("/purchase/{id}")
+    public ResponseEntity<?> deletePurchase(@PathVariable Long id) {
+        return nfceService.deletePurchase(id)
+                .map(p -> ResponseEntity.ok(
+                        Map.of("message", "NFCe deletada com sucesso!", "purchase", p)))
+                .orElse(ResponseEntity.status(404)
+                        .body(Map.of("erro", "NFCe não encontrada")));
     }
 }

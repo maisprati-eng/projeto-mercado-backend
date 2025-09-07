@@ -19,6 +19,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -28,6 +29,14 @@ public class NfceService {
     private final AuthUserRepository userRepo;
     private final SupermarketRepository supermarketRepo;
     private final PurchaseRepository purchaseRepo;
+
+    @Transactional
+    public Optional<Purchase> deletePurchase(Long id) {
+        Optional<Purchase> purchase = purchaseRepo.findById(id);
+        purchase.ifPresent(purchaseRepo::delete);
+        return purchase;
+    }
+
     private final CatalogRepository catalogRepo;
     private final ItemRepository itemRepo;
 

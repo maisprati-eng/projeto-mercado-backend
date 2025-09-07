@@ -1,6 +1,5 @@
 package com.prati.projetomercado.controller;
 
-
 import com.prati.projetomercado.dto.request.CreateUserRequest;
 import com.prati.projetomercado.dto.request.LoginUserRequest;
 import com.prati.projetomercado.dto.request.RefreshTokenRequest;
@@ -14,7 +13,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
-
 
 @RestController
 @RequestMapping("/auth")
@@ -33,24 +31,11 @@ public class AuthController {
     }
 
     @PostMapping("/register")
-    public ResponseEntity<String> register(@RequestBody CreateUserRequest userRequest) {
-        String username = userRequest.username();
-        String password = userRequest.password();
-        String confirmPassword = userRequest.confirmPassword();
-
-        if (!password.equals(confirmPassword)) {
-            return ResponseEntity.badRequest().body("As senhas não conferem!");
-        }
-
-        if (password.length() < 8) {
-            return ResponseEntity.badRequest().body("A senha deve ter pelo menos 8 caracteres!");
-        }
-
+    public ResponseEntity<Void> register(@RequestBody CreateUserRequest userRequest) {
         userService.registerUser(userRequest);
+        return new ResponseEntity<>(HttpStatus.CREATED);
 
-        return ResponseEntity.ok("Usuário cadastrado com sucesso!");
     }
-
 
     @PostMapping("/login")
     public ResponseEntity<JwtToken> login(@RequestBody LoginUserRequest userRequest) throws Exception {
@@ -58,16 +43,6 @@ public class AuthController {
        return new ResponseEntity<>(jwtToken, HttpStatus.OK);
        
     }
-
-    //adicionando logout
-    @PostMapping("/logout")
-    public ResponseEntity<String> logout(@RequestHeader("Authorization") String authorization) {
-        String token = TokenUtils.recoveryToken(authorization);
-        jwtTokenServiceImpl.invalidateToken(token); // você precisa implementar isso
-        return ResponseEntity.ok("Logout realizado com sucesso!");
-    }
-
-
 
     @PostMapping("/refresh-token")
     public ResponseEntity<JwtToken> refresh(@RequestHeader String Authorization, @RequestBody RefreshTokenRequest refreshToken) throws Exception {

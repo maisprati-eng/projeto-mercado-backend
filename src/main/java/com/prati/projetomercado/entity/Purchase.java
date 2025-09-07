@@ -36,6 +36,6 @@ public class Purchase {
     @Column(name = "total_price")
     private Double totalPrice;
 
-    @OneToMany(mappedBy = "purchase")
+    @OneToMany(mappedBy = "purchase", cascade = CascadeType.REMOVE, orphanRemoval = true)
     private List<Item> items;
 }

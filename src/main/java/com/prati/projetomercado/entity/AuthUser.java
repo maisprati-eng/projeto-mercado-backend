@@ -36,7 +36,7 @@ public class AuthUser {
             joinColumns = @JoinColumn(name = "user_id"),
             inverseJoinColumns = @JoinColumn(name = "role_id")
     )
-    private List<AccountRole> roles = new ArrayList<>();
+    private List<AccountRole> roles;
 
     @OneToMany(mappedBy = "authUser", cascade = CascadeType.ALL)
     private List<RefreshToken> refreshTokens = new ArrayList<>();
