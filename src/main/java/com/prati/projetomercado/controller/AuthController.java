@@ -40,6 +40,7 @@ public class AuthController {
         this.jwtTokenServiceImpl = jwtTokenServiceImpl;
     }
 
+    @Operation(summary = "Realiza o cadastro do usuário", description = "O usuario agora pode realizar o login e obter o token.")
     @PostMapping("/register")
     public ResponseEntity<Object> register(@RequestBody CreateUserRequest userRequest) {
         String username = userRequest.username();
@@ -59,7 +60,7 @@ public class AuthController {
         return ResponseEntity.ok("Usuário cadastrado com sucesso!");
     }
 
-
+    @Operation(summary = "Realiza o login do usuário", description = "Cria o token de acesso (JWT) para obter a autorização.")
     @PostMapping("/login")
     public ResponseEntity<JwtToken> login(@RequestBody LoginUserRequest userRequest) throws Exception {
        var jwtToken = userService.login(userRequest);
@@ -75,7 +76,7 @@ public class AuthController {
     @SecurityRequirement(name = "bearerAuth")
     @PostMapping("/logout")
     public ResponseEntity<String> logout(
-            @Parameter(hidden = true) // o authorization não precisa ser realizado aqui se ele já ocorre apos o login
+            @Parameter(hidden = true)
             @RequestHeader("Authorization") String authorization) {
         String token = TokenUtils.recoveryToken(authorization);
         jwtTokenServiceImpl.invalidateToken(token);
@@ -87,10 +88,10 @@ public class AuthController {
             @ApiResponse(responseCode = "200", description = "Token atualizado com sucesso"),
             @ApiResponse(responseCode = "403", description = "Refresh token inválido ou expirado")
     })
-    @SecurityRequirement(name = "bearerAuth") // Diz ao Swagger para usar a segurança que configuramos
+    @SecurityRequirement(name = "bearerAuth")
     @PostMapping("/refresh-token")
     public ResponseEntity<JwtToken> refresh(
-            @Parameter(hidden = true) // <-- ESTA É A MÁGICA!
+            @Parameter(hidden = true)
             @RequestHeader String Authorization,
             @RequestBody RefreshTokenRequest refreshToken) throws Exception {
 
@@ -106,7 +107,7 @@ public class AuthController {
     @SecurityRequirement(name = "bearerAuth")
     @PostMapping("/test-autenticated")
     public ResponseEntity<String> test(
-            @Parameter(hidden = true) // authorization não é necessario
+            @Parameter(hidden = true)
             @RequestHeader String Authorization,
             @RequestBody String alow) throws Exception {
         return new ResponseEntity<>("ok", HttpStatus.OK);

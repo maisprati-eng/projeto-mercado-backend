@@ -4,9 +4,12 @@ import com.auth0.jwt.JWT;
 import com.auth0.jwt.algorithms.Algorithm;
 import com.auth0.jwt.exceptions.JWTCreationException;
 import com.auth0.jwt.exceptions.JWTVerificationException;
+import com.prati.projetomercado.entity.AccessToken;
 import com.prati.projetomercado.config.UserDetailsImpl;
 import com.prati.projetomercado.entity.AuthUser;
 import com.prati.projetomercado.entity.RefreshToken;
+import com.prati.projetomercado.repository.AccessTokenRepository;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import java.time.Instant;
 import java.time.ZoneId;
@@ -16,11 +19,15 @@ import java.util.HashSet;
 
 
 @Service
+@RequiredArgsConstructor
 public class JwtTokenServiceImpl {
     //TODO colocar secret key em um arquivo a parte
     public static final String SECRET_KEY = "MUDAR_DEPOIS";
 
     public static final String ISSUER = "prati-projeto-mercado";
+
+    // Injetando o repositório para falar com o banco de dados
+    private final AccessTokenRepository accessTokenRepository;
 
     public String generateToken(AuthUser authUser, Instant expirationDate) {
         try {
@@ -39,16 +46,12 @@ public class JwtTokenServiceImpl {
 
     public String getSubjectFromToken(String token) {
         //deverá checar se o token está na blacklist antes de validar
-        if (isTokenInvalid(token)) {
-            throw new JWTVerificationException("Token foi invalidado (logout realizado)");
-        }
+        //Removemos a verificação da blacklist daqui
         try {
             var algorithm = Algorithm.HMAC256(SECRET_KEY);
             return JWT.require(algorithm).withIssuer(ISSUER).build().verify(token).getSubject();
         } catch (JWTVerificationException e) {
-            e.printStackTrace();
             throw new JWTVerificationException("Invalid/expired token");
-            
         }
     }
     
@@ -67,14 +70,20 @@ public class JwtTokenServiceImpl {
         return refreshToken;
     }
 
-    private final Set<String> blacklist = new HashSet<>();
-
+    //A blacklist em memória não será mais usada
+    //O método invalidateToken agora apaga o token do banco de dados
     public void invalidateToken(String token) {
-        blacklist.add(token);
+        // 1. Procura o AccessToken no banco de dados pela string do token
+        accessTokenRepository.findByToken(token)
+                .ifPresent(accessToken -> {
+                    // 2. Se encontrar, apaga a linha correspondente da tabela
+                    accessTokenRepository.delete(accessToken);
+                });
     }
 
-    public boolean isTokenInvalid(String token) {
-        return blacklist.contains(token);
-    }
+    // o método não é mais necessário
+    //public boolean isTokenInvalid(String token) {
+    //    return blacklist.contains(token);
+    //}
 
 }

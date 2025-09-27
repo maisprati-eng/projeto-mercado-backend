@@ -9,4 +9,6 @@ import java.util.UUID;
 
 public interface AccessTokenRepository extends JpaRepository<AccessToken, UUID> {
     AccessToken findByAuthUser(AuthUser authUser);
+
+    Optional<AccessToken> findByToken(String token);
 }
