@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonAnyGetter;
 import com.prati.projetomercado.exceptions.BadCredentialsException;
 import com.prati.projetomercado.exceptions.BadRequestException;
 import com.prati.projetomercado.exceptions.FieldError;
+import com.prati.projetomercado.exceptions.ConflictException;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -18,10 +19,13 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+import lombok.extern.slf4j.Slf4j;
+
+@Slf4j
 @RestControllerAdvice
 public class ExceptionAdvice {
 
-    static class ErrorResponse {
+    public static class ErrorResponse {
         public Instant timestamp;
         public int status;
         public String error;
@@ -53,6 +57,15 @@ public class ExceptionAdvice {
         public Map<String, Object> any() {
             return extras;
         }
+
+        ErrorResponse withCode() {
+            extras.put("code", "Email já existe");
+            return this;
+        }
+
+        void withField(String field, String message) {
+            extras.put(field, message);
+        }
     }
 
     /* 404 - rota não existe */
@@ -80,13 +93,9 @@ public class ExceptionAdvice {
 
     /* 400 - JSON malformado (body inválido) */
     @ExceptionHandler(HttpMessageNotReadableException.class)
-    public ResponseEntity<ErrorResponse> handleNotReadable(
-            HttpMessageNotReadableException ex, HttpServletRequest req) {
-
-        var body = new ErrorResponse(
-                HttpStatus.BAD_REQUEST,
-                "JSON malformado ou tipo incompatível.",
-                req.getRequestURI());
+    public ResponseEntity<ErrorResponse> handleNotReadable(HttpMessageNotReadableException ex, HttpServletRequest req) {
+        log.warn("400 JSON malformado em {}: {}", req.getRequestURI(), ex.getMessage());
+        var body = new ErrorResponse(HttpStatus.BAD_REQUEST, "JSON malformado ou tipo incompatível.", req.getRequestURI());
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(body);
     }
 
@@ -110,7 +119,21 @@ public class ExceptionAdvice {
     /* 500 - fallback */
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleGeneric(Exception ex, HttpServletRequest req) {
+        log.error("500 erro não tratado em {}", req.getRequestURI(), ex);
         var body = new ErrorResponse(HttpStatus.INTERNAL_SERVER_ERROR, "Erro interno", req.getRequestURI());
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(body);
     }
+
+    @ExceptionHandler(ConflictException.class)
+    public ResponseEntity<ErrorResponse> handleConflict(ConflictException ex, HttpServletRequest req) {
+        var body = new ErrorResponse(HttpStatus.CONFLICT, ex.getMessage(), req.getRequestURI())
+                .withCode();
+
+        if (ex.getFieldErrors() != null) {
+            ex.getFieldErrors().forEach(body::withField);
+        }
+
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(body);
+    }
+
 }

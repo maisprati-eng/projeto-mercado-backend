@@ -8,10 +8,7 @@ import com.prati.projetomercado.dto.response.AuthResponse;
 import com.prati.projetomercado.dto.response.UserResponse;
 import com.prati.projetomercado.entity.AccessToken;
 import com.prati.projetomercado.entity.AuthUser;
-import com.prati.projetomercado.exceptions.AuthException;
-import com.prati.projetomercado.exceptions.BadCredentialsException;
-import com.prati.projetomercado.exceptions.BadRequestException;
-import com.prati.projetomercado.exceptions.FieldError;
+import com.prati.projetomercado.exceptions.*;
 import com.prati.projetomercado.model.JwtToken;
 import com.prati.projetomercado.repository.AccessTokenRepository;
 import com.prati.projetomercado.repository.AuthUserRepository;
@@ -23,6 +20,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -54,9 +52,12 @@ public class UserServiceImpl implements UserService {
     public void registerUser(CreateUserRequest createUserRequest) {
         String rawPassword = getPassword(createUserRequest);
 
-        // Fluxo normal de criação
+        if (userRepository.existsByEmail(createUserRequest.email())) {
+            throw new ConflictException("E-mail já cadastrado")
+                    .withField("email", "Este e-mail já está em uso.");
+        }
+
         if (emailConfirmationEnabled) {
-            // Envio de confirmação por e-mail
             String confirmationToken = UUID.randomUUID().toString();
             AuthUser newUser = AuthUser.builder()
                     .email(createUserRequest.email())
@@ -121,13 +122,13 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public AuthResponse login(LoginUserRequest loginUserRequest) throws Exception {
+    public AuthResponse login(LoginUserRequest loginUserRequest) {
         var token = new UsernamePasswordAuthenticationToken(loginUserRequest.email(), loginUserRequest.password());
         Authentication authentication;
         try {
             authentication = authenticationManager.authenticate(token);
-        } catch (Exception e) {
-            throw new AuthException("Auth manager error");
+        } catch (AuthenticationException e) {
+            throw new AuthException("Erro de autenticação");
         }
 
         var userDetailsImpl = (UserDetailsImpl) authentication.getPrincipal();

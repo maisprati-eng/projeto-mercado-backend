@@ -8,6 +8,11 @@ import java.util.List;
 public class BadCredentialsException extends RuntimeException {
     private final List<FieldError> fieldErrors;
 
+    public BadCredentialsException(String message, List<FieldError> fieldErrors) {
+        super(message);
+        this.fieldErrors = fieldErrors;
+    }
+
     public BadCredentialsException(List<FieldError> fieldErrors) {
         super("Credenciais inválidas");
         this.fieldErrors = fieldErrors;
