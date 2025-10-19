@@ -74,7 +74,6 @@ public class SecurityConfiguration {
     @Order(10)
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-                // H2 console precisa de frame e sem CSRF nesse path
                 .csrf(csrf -> csrf.ignoringRequestMatchers(new AntPathRequestMatcher("/h2-console/**"), new AntPathRequestMatcher("/auth/**")))
                 .headers(headers -> headers.frameOptions(frame -> frame.sameOrigin()))
 
@@ -101,7 +100,7 @@ public class SecurityConfiguration {
                             );
                             res.getWriter().write(body);
                         })
-                        .accessDeniedHandler((req, res, denied) -> { // <--- 'denied' é o parâmetro certo
+                        .accessDeniedHandler((req, res, denied) -> {
                             res.setStatus(HttpServletResponse.SC_FORBIDDEN);
                             res.setContentType("application/json;charset=UTF-8");
                             var body = objectMapper.writeValueAsString(
@@ -120,7 +119,6 @@ public class SecurityConfiguration {
         return http.build();
     }
 
-    // CORS básico (ajuste origens conforme seu frontend)
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration corsConfiguration = new CorsConfiguration();

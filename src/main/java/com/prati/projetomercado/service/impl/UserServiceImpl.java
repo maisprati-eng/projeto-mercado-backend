@@ -10,6 +10,7 @@ import com.prati.projetomercado.entity.AccessToken;
 import com.prati.projetomercado.entity.AuthUser;
 import com.prati.projetomercado.exceptions.AuthException;
 import com.prati.projetomercado.exceptions.BadCredentialsException;
+import com.prati.projetomercado.exceptions.BadRequestException;
 import com.prati.projetomercado.exceptions.FieldError;
 import com.prati.projetomercado.model.JwtToken;
 import com.prati.projetomercado.repository.AccessTokenRepository;
@@ -34,8 +35,6 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
-import com.prati.projetomercado.exceptions.BadRequestException;
-
 @Service
 @RequiredArgsConstructor
 public class UserServiceImpl implements UserService {
@@ -51,40 +50,51 @@ public class UserServiceImpl implements UserService {
     @Value("${email.confirmation.enabled}")
     private boolean emailConfirmationEnabled;
 
-
     @Override
     public void registerUser(CreateUserRequest createUserRequest) {
-        if (!createUserRequest.password().equals(createUserRequest.confirmPassword())) {
+        String rawPassword = createUserRequest.password();
+
+        // Validação de senha curta
+        if (rawPassword == null || rawPassword.length() < 6) {
+            throw new BadRequestException(
+                    "Requisição inválida",
+                    List.of(new FieldError("password", "A senha deve ter pelo menos 6 caracteres."))
+            );
+        }
+
+        // Confirmação de senha
+        String confirm = createUserRequest.confirmPassword();
+        if (confirm != null && !rawPassword.equals(confirm)) {
             throw new BadCredentialsException(
-                    List.of(new FieldError("confirmPassword", "Passwords don't match"), new FieldError("password", "Passwords don't match")));
+                    List.of(new FieldError("confirmPassword", "As senhas não conferem."))
+            );
         }
 
-        if (createUserRequest.password().length() < 6) {
-            throw new BadRequestException("A senha deve ter pelo menos 6 caracteres.");
-        }
-
-        // A NOVA LÓGICA CONDICIONAL INTERRUPTOR
+        // Fluxo normal de criação
         if (emailConfirmationEnabled) {
-            // --- CENÁRIO 1: ENVIO DE E-MAIL LIGADO --- email.confirmation.enabled=true
+            // Envio de confirmação por e-mail
             String confirmationToken = UUID.randomUUID().toString();
             AuthUser newUser = AuthUser.builder()
                     .email(createUserRequest.email())
                     .username(createUserRequest.username())
-                    .password(encoder.encode(createUserRequest.password()))
-                    .enabled(false) // Começa desativado
+                    .password(encoder.encode(rawPassword))
+                    .enabled(false)
                     .confirmationToken(confirmationToken)
                     .confirmationTokenExpiry(LocalDateTime.now().plusHours(24))
                     .build();
+
             AuthUser savedUser = userRepository.save(newUser);
             emailService.sendConfirmationEmail(savedUser);
+
         } else {
-            // --- CENÁRIO 2: ENVIO DE E-MAIL DESLIGADO (MODO DEV) --- email.confirmation.enabled=false
+            // Modo dev — sem confirmação
             AuthUser newUser = AuthUser.builder()
                     .email(createUserRequest.email())
                     .username(createUserRequest.username())
-                    .password(encoder.encode(createUserRequest.password()))
-                    .enabled(true) // Já começa ativado
+                    .password(encoder.encode(rawPassword))
+                    .enabled(true)
                     .build();
+
             userRepository.save(newUser);
         }
     }
@@ -107,11 +117,10 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public AuthResponse login(LoginUserRequest loginUserRequest) throws Exception {
-        var usernamePasswordAuthenticationToken = new UsernamePasswordAuthenticationToken(loginUserRequest.email(), loginUserRequest.password());
+        var token = new UsernamePasswordAuthenticationToken(loginUserRequest.email(), loginUserRequest.password());
         Authentication authentication;
-
         try {
-            authentication = authenticationManager.authenticate(usernamePasswordAuthenticationToken);
+            authentication = authenticationManager.authenticate(token);
         } catch (Exception e) {
             throw new AuthException("Auth manager error");
         }
@@ -120,42 +129,43 @@ public class UserServiceImpl implements UserService {
         var user = userDetailsImpl.getAuthUser();
 
         if (!user.isEnabled()) {
-            // Se o usuário não estiver ativo, lança uma exceção e impede o login.
             throw new AuthException("Por favor, confirme seu e-mail para ativar sua conta.");
         }
 
-        var accessTokenEntityOld = accessTokenRepository.findByAuthUser(user);
-
-        if (accessTokenEntityOld != null) {
-            accessTokenRepository.delete(accessTokenEntityOld);
+        var oldAccessToken = accessTokenRepository.findByAuthUser(user);
+        if (oldAccessToken != null) {
+            accessTokenRepository.delete(oldAccessToken);
         }
 
-        var refreshToken = jwtTokenService.generateNewRefreshToken(userDetailsImpl.getAuthUser());
-
+        var refreshToken = jwtTokenService.generateNewRefreshToken(user);
         refreshTokenRepository.save(refreshToken);
-        var accessTokenExpirationDate = jwtTokenService.expirationAccessTokenDate();
-        var accessToken = jwtTokenService.generateToken(userDetailsImpl.getAuthUser(), accessTokenExpirationDate);
-        var accessTokenEntity = AccessToken.builder().authUser(userDetailsImpl.getAuthUser()).token(accessToken).expiredDate(accessTokenExpirationDate).build();
+
+        var accessTokenExp = jwtTokenService.expirationAccessTokenDate();
+        var accessToken = jwtTokenService.generateToken(user, accessTokenExp);
+        var accessTokenEntity = AccessToken.builder()
+                .authUser(user)
+                .token(accessToken)
+                .expiredDate(accessTokenExp)
+                .build();
         accessTokenRepository.save(accessTokenEntity);
 
-        var id = userDetailsImpl.getAuthUser().getId();
-        var username = userDetailsImpl.getAuthUser().getUsername();
-        var email = userDetailsImpl.getAuthUser().getEmail();
-        var creationDate = userDetailsImpl.getAuthUser().getCreationDate();
-
-        return new AuthResponse(accessToken, refreshToken.getId(), new UserResponse(id, username, email, creationDate));
+        return new AuthResponse(
+                accessToken,
+                refreshToken.getId(),
+                new UserResponse(user.getId(), user.getUsername(), user.getEmail(), user.getCreationDate())
+        );
     }
 
     private Optional<AuthUser> getAuthUser(String accessToken) {
         var email = jwtTokenService.getSubjectFromToken(accessToken);
         return userRepository.findByEmail(email);
-
-
     }
 
     @Override
     public JwtToken useRefreshToken(String accessToken, UUID refreshTokenId) {
-        final var refreshToken = refreshTokenRepository.findByIdAndExpiresAtAfter(refreshTokenId, Instant.now()).orElseThrow(() -> new AuthException("No refreshToken found / refreshToken expired"));
+        final var refreshToken = refreshTokenRepository
+                .findByIdAndExpiresAtAfter(refreshTokenId, Instant.now())
+                .orElseThrow(() -> new AuthException("No refreshToken found / refreshToken expired"));
 
         if (refreshToken.isAlreadyUsed()) {
             throw new AuthException("Token has already been used");
@@ -164,94 +174,71 @@ public class UserServiceImpl implements UserService {
         refreshToken.setAlreadyUsed(true);
         refreshTokenRepository.save(refreshToken);
 
-        var authuser = getAuthUser(accessToken).orElseThrow(() -> new AuthException("user not found"));
-        var accessTokenEntityOld = accessTokenRepository.findByAuthUserAndToken(authuser, accessToken);
-        accessTokenEntityOld.ifPresent(accessTokenEntity -> {
-            accessTokenRepository.delete(accessTokenEntity);
-        });
+        var user = getAuthUser(accessToken).orElseThrow(() -> new AuthException("user not found"));
 
-        var newRefreshToken = jwtTokenService.generateNewRefreshToken(authuser);
+        accessTokenRepository.findByAuthUserAndToken(user, accessToken)
+                .ifPresent(accessTokenRepository::delete);
 
+        var newRefreshToken = jwtTokenService.generateNewRefreshToken(user);
         refreshTokenRepository.save(newRefreshToken);
-        var newAccessTokenExpDate = jwtTokenService.expirationAccessTokenDate();
-        var newAccessToken = jwtTokenService.generateToken(authuser, newAccessTokenExpDate);
 
-        var newAccessTokenEntity = AccessToken.builder().authUser(authuser).token(newAccessToken).expiredDate(newAccessTokenExpDate).build();
+        var newAccessExp = jwtTokenService.expirationAccessTokenDate();
+        var newAccessToken = jwtTokenService.generateToken(user, newAccessExp);
 
-        accessTokenRepository.save(newAccessTokenEntity);
+        var newAccessEntity = AccessToken.builder()
+                .authUser(user)
+                .token(newAccessToken)
+                .expiredDate(newAccessExp)
+                .build();
+        accessTokenRepository.save(newAccessEntity);
 
         return new JwtToken(newAccessToken, newRefreshToken.getId());
-
     }
 
     @Override
     public UserResponse getUserInfo() {
-        // 1. Pega o email do usuário a partir do token de segurança
         String email = SecurityContextHolder.getContext().getAuthentication().getName();
-
-        // 2. Busca o usuário completo no banco de dados usando o email
-        AuthUser authUser = userRepository.findByEmail(email)
+        AuthUser user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new UsernameNotFoundException("Usuário não encontrado com o email: " + email));
 
-        // 3. Converte a entidade AuthUser para o nosso DTO de resposta seguro
-        return new UserResponse(
-                authUser.getId(),
-                authUser.getUsername(),
-                authUser.getEmail(),
-                authUser.getCreationDate()
-        );
+        return new UserResponse(user.getId(), user.getUsername(), user.getEmail(), user.getCreationDate());
     }
 
     @Override
     public void changePassword(ChangePasswordRequest request) {
-        // 1. Pega o email do usuário a partir do token de segurança
         String email = SecurityContextHolder.getContext().getAuthentication().getName();
         AuthUser currentUser = userRepository.findByEmail(email)
                 .orElseThrow(() -> new UsernameNotFoundException("Usuário não encontrado."));
 
-        // 2. Verifica se a "senha atual" fornecida bate com a senha salva no banco.
-        // O passwordEncoder.matches() compara a senha em texto plano com a senha criptografada.
         if (!encoder.matches(request.currentPassword(), currentUser.getPassword())) {
             throw new BadCredentialsException(List.of(new FieldError("currentPassword", "A senha atual está incorreta.")));
         }
 
-        // 3. Verifica se a "nova senha" e a "confirmação" são iguais.
         if (!request.newPassword().equals(request.confirmNewPassword())) {
             throw new BadCredentialsException(List.of(new FieldError("confirmNewPassword", "A nova senha e a confirmação não conferem.")));
         }
 
-        // 4. (Opcional, mas recomendado) Adicionar validações para a nova senha.
         if (request.newPassword().length() < 8) {
             throw new BadCredentialsException(List.of(new FieldError("newPassword", "A nova senha deve ter no mínimo 8 caracteres.")));
         }
 
-        // 5. Se todas as verificações passaram, criptografa e atualiza a senha.
         currentUser.setPassword(encoder.encode(request.newPassword()));
-
-        // 6. Salva o usuário com a nova senha no banco de dados.
         userRepository.save(currentUser);
     }
 
     @Override
     @Transactional
     public void confirmUser(String token) {
-        // 1. Busca o usuário pelo token de confirmação
         AuthUser user = userRepository.findByConfirmationToken(token)
                 .orElseThrow(() -> new AuthException("Token de confirmação inválido ou não encontrado."));
 
-        // 2. Verifica se o token já expirou
         if (user.getConfirmationTokenExpiry().isBefore(LocalDateTime.now())) {
             throw new AuthException("Token de confirmação expirado.");
         }
 
-        // 3. Ativa o usuário
         user.setEnabled(true);
-
-        // 4. Limpa o token para que não possa ser usado novamente (segurança)
         user.setConfirmationToken(null);
         user.setConfirmationTokenExpiry(null);
-
-        // 5. Salva as alterações no banco de dados
         userRepository.save(user);
     }
 }

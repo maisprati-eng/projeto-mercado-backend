@@ -1,140 +1,116 @@
 package com.prati.projetomercado.advice;
 
-import com.prati.projetomercado.exceptions.BadRequestException;
-import com.prati.projetomercado.exceptions.ErrorResponse;
-import com.prati.projetomercado.exceptions.AuthException;
+import com.fasterxml.jackson.annotation.JsonAnyGetter;
 import com.prati.projetomercado.exceptions.BadCredentialsException;
-import com.prati.projetomercado.exceptions.DuplicateNfceException;
-import com.prati.projetomercado.exceptions.EntityNotFoundException;
-import com.prati.projetomercado.exceptions.SupermarketDeletionException;
-import com.prati.projetomercado.exceptions.UnauthorizedAccessException;
-
+import com.prati.projetomercado.exceptions.BadRequestException;
+import com.prati.projetomercado.exceptions.FieldError;
 import jakarta.servlet.http.HttpServletRequest;
-
-import org.springframework.core.Ordered;
-import org.springframework.core.annotation.Order;
-
-import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
-
 import org.springframework.http.converter.HttpMessageNotReadableException;
-
-import org.springframework.web.bind.MethodArgumentNotValidException;
-import org.springframework.web.bind.MissingServletRequestParameterException;
-
+import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.servlet.NoHandlerFoundException;
 
-import org.springframework.web.context.request.ServletWebRequest;
-import org.springframework.web.context.request.WebRequest;
-
-import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
+import java.time.Instant;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 
 @RestControllerAdvice
-@Order(Ordered.HIGHEST_PRECEDENCE)
-public class ExceptionAdvice extends ResponseEntityExceptionHandler {
+public class ExceptionAdvice {
 
-    // =========================
-    // EXCEÇÕES DE DOMÍNIO
-    // =========================
+    static class ErrorResponse {
+        public Instant timestamp;
+        public int status;
+        public String error;
+        public String message;
+        public String path;
 
+        // campos extras (ex.: "password": "mensagem") aparecem no topo do JSON
+        private final Map<String, Object> extras = new LinkedHashMap<>();
+
+        ErrorResponse(HttpStatus status, String message, String path) {
+            this.timestamp = Instant.now();
+            this.status = status.value();
+            this.error = status.getReasonPhrase();
+            this.message = message;
+            this.path = path;
+        }
+
+        ErrorResponse withFields(List<FieldError> fieldErrors) {
+            if (fieldErrors != null) {
+                for (FieldError fe : fieldErrors) {
+                    // cada erro vira uma chave no nível raiz do JSON
+                    extras.put(fe.fieldName(), fe.errorMessage());
+                }
+            }
+            return this;
+        }
+
+        @JsonAnyGetter
+        public Map<String, Object> any() {
+            return extras;
+        }
+    }
+
+    /* 404 - rota não existe */
+    @ExceptionHandler(NoHandlerFoundException.class)
+    public ResponseEntity<ErrorResponse> handleNoHandler(NoHandlerFoundException ex, HttpServletRequest req) {
+        var body = new ErrorResponse(HttpStatus.NOT_FOUND, "Rota não encontrada", req.getRequestURI());
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(body);
+    }
+
+    /* 405 - método não permitido */
+    @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
+    public ResponseEntity<ErrorResponse> handleMethodNotAllowed(
+            HttpRequestMethodNotSupportedException ex, HttpServletRequest req) {
+
+        String allowed = (ex.getSupportedHttpMethods() != null && !ex.getSupportedHttpMethods().isEmpty())
+                ? " Permitidos: " + ex.getSupportedHttpMethods()
+                : "";
+
+        var body = new ErrorResponse(
+                HttpStatus.METHOD_NOT_ALLOWED,
+                "Método não suportado." + allowed,
+                req.getRequestURI());
+        return ResponseEntity.status(HttpStatus.METHOD_NOT_ALLOWED).body(body);
+    }
+
+    /* 400 - JSON malformado (body inválido) */
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<ErrorResponse> handleNotReadable(
+            HttpMessageNotReadableException ex, HttpServletRequest req) {
+
+        var body = new ErrorResponse(
+                HttpStatus.BAD_REQUEST,
+                "JSON malformado ou tipo incompatível.",
+                req.getRequestURI());
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(body);
+    }
+
+    /* 400 - sua BadRequestException com erros de campo no topo */
     @ExceptionHandler(BadRequestException.class)
-    public ResponseEntity<Object> handleBadRequest(BadRequestException ex, HttpServletRequest request) {
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                .body(new ErrorResponse(HttpStatus.BAD_REQUEST, ex.getMessage(), request));
+    public ResponseEntity<ErrorResponse> handleBadRequest(BadRequestException ex, HttpServletRequest req) {
+        var body = new ErrorResponse(HttpStatus.BAD_REQUEST, "Requisição inválida", req.getRequestURI())
+                .withFields(ex.getFieldErrors());
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(body);
     }
 
-    @ExceptionHandler(AuthException.class)
-    public ResponseEntity<Object> handleAuthException(AuthException ex, HttpServletRequest request) {
-        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                .body(new ErrorResponse(HttpStatus.UNAUTHORIZED, ex.getMessage(), request));
+    /* 400 - credenciais/validações */
+    @ExceptionHandler(BadCredentialsException.class)
+    public ResponseEntity<ErrorResponse> handleBadCredentials(BadCredentialsException ex, HttpServletRequest req) {
+        var status = HttpStatus.BAD_REQUEST; // mantenha 400 para alinhar com os testes/contrato
+        var body = new ErrorResponse(status, "Credenciais inválidas", req.getRequestURI())
+                .withFields(ex.getFieldErrors());
+        return ResponseEntity.status(status).body(body);
     }
 
-    @ExceptionHandler(BadCredentialsException.class) // sua BadCredentialsException de domínio
-    public ResponseEntity<Object> handleBadCredentials(BadCredentialsException ex, HttpServletRequest request) {
-        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                .body(new ErrorResponse(HttpStatus.UNAUTHORIZED, ex.getMessage(), request));
-    }
-
-    @ExceptionHandler(UnauthorizedAccessException.class)
-    public ResponseEntity<Object> handleUnauthorizedAccess(UnauthorizedAccessException ex, HttpServletRequest request) {
-        return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                .body(new ErrorResponse(HttpStatus.FORBIDDEN, ex.getMessage(), request));
-    }
-
-    @ExceptionHandler(EntityNotFoundException.class)
-    public ResponseEntity<Object> handleNotFound(EntityNotFoundException ex, HttpServletRequest request) {
-        return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                .body(new ErrorResponse(HttpStatus.NOT_FOUND, ex.getMessage(), request));
-    }
-
-    @ExceptionHandler({DuplicateNfceException.class, SupermarketDeletionException.class})
-    public ResponseEntity<Object> handleConflicts(RuntimeException ex, HttpServletRequest request) {
-        return ResponseEntity.status(HttpStatus.CONFLICT)
-                .body(new ErrorResponse(HttpStatus.CONFLICT, ex.getMessage(), request));
-    }
-
-    @ExceptionHandler(jakarta.validation.ConstraintViolationException.class)
-    public ResponseEntity<Object> handleConstraintViolation(jakarta.validation.ConstraintViolationException ex,
-                                                            HttpServletRequest request) {
-        String msg = "Violação de restrição: " + ex.getMessage();
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                .body(new ErrorResponse(HttpStatus.BAD_REQUEST, msg, request));
-    }
-
-    // =========================
-    // OVERRIDES DO SPRING (400)
-    // =========================
-
-    @Override
-    protected ResponseEntity<Object> handleMethodArgumentNotValid(
-            MethodArgumentNotValidException ex,
-            HttpHeaders headers,
-            HttpStatusCode status,
-            WebRequest request) {
-
-        var servletReq = ((ServletWebRequest) request).getRequest();
-        String msg = "Requisição inválida: " + ex.getBindingResult().getErrorCount() + " erro(s) de validação.";
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                .body(new ErrorResponse(HttpStatus.BAD_REQUEST, msg, servletReq));
-    }
-
-    @Override
-    protected ResponseEntity<Object> handleHttpMessageNotReadable(
-            HttpMessageNotReadableException ex,
-            HttpHeaders headers,
-            HttpStatusCode status,
-            WebRequest request) {
-
-        var servletReq = ((ServletWebRequest) request).getRequest();
-        String msg = "JSON malformado ou tipo incompatível.";
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                .body(new ErrorResponse(HttpStatus.BAD_REQUEST, msg, servletReq));
-    }
-
-    @Override
-    protected ResponseEntity<Object> handleMissingServletRequestParameter(
-            MissingServletRequestParameterException ex,
-            HttpHeaders headers,
-            HttpStatusCode status,
-            WebRequest request) {
-
-        var servletReq = ((ServletWebRequest) request).getRequest();
-        String msg = "Parâmetro obrigatório ausente: " + ex.getParameterName();
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                .body(new ErrorResponse(HttpStatus.BAD_REQUEST, msg, servletReq));
-    }
-
-    // =========================
-    // CATCH-ALL (500)
-    // =========================
-
-    @ExceptionHandler({RuntimeException.class, Exception.class})
-    public ResponseEntity<Object> handleServerErrors(Exception ex, HttpServletRequest request) {
-        String msg = (ex.getMessage() != null && !ex.getMessage().isBlank()) ? ex.getMessage() : "Erro interno do servidor";
-        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(new ErrorResponse(HttpStatus.INTERNAL_SERVER_ERROR, msg, request));
+    /* 500 - fallback */
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<ErrorResponse> handleGeneric(Exception ex, HttpServletRequest req) {
+        var body = new ErrorResponse(HttpStatus.INTERNAL_SERVER_ERROR, "Erro interno", req.getRequestURI());
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(body);
     }
 }
