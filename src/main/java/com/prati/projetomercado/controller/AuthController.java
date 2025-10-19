@@ -16,6 +16,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -40,7 +41,7 @@ public class AuthController {
             @ApiResponse(responseCode = "400", description = "Dados inválidos (ex: senhas não conferem)")
     })
     @PostMapping("/register")
-    public ResponseEntity<Object> register(@RequestBody CreateUserRequest userRequest) {
+    public ResponseEntity<Object> register(@Valid @RequestBody CreateUserRequest userRequest) {
         // A validação de senhas agora está corretamente no Service, mas podemos manter uma aqui se quisermos.
         // Por consistência, vamos confiar na lógica do Service.
         userService.registerUser(userRequest);
@@ -54,7 +55,7 @@ public class AuthController {
             @ApiResponse(responseCode = "401", description = "Credenciais inválidas ou conta não confirmada")
     })
     @PostMapping("/login")
-    public ResponseEntity<AuthResponse> login(@RequestBody LoginUserRequest userRequest) throws Exception {
+    public ResponseEntity<AuthResponse> login(@Valid @RequestBody LoginUserRequest userRequest) throws Exception {
         var authResponse= userService.login(userRequest);
         return new ResponseEntity<>(authResponse, HttpStatus.OK);
     }

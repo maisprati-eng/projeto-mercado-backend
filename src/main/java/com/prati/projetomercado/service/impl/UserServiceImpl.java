@@ -45,12 +45,36 @@ public class UserServiceImpl implements UserService {
     private final AccessTokenRepository accessTokenRepository;
     private final EmailService emailService;
 
+    private String normalizeEmail(String raw) {
+        if (raw == null) return null;
+        String trimmed = raw.trim().toLowerCase(java.util.Locale.ROOT);
+        int at = trimmed.lastIndexOf('@');
+        if (at > 0 && at < trimmed.length() - 1) {
+            String local = trimmed.substring(0, at);
+            String domain = trimmed.substring(at + 1);
+            try {
+                String asciiDomain = java.net.IDN.toASCII(domain);
+                return local + "@" + asciiDomain;
+            } catch (Exception e) {
+                return trimmed; // fallback: mantém como está
+            }
+        }
+        return trimmed;
+    }
+
+
     @Value("${email.confirmation.enabled}")
     private boolean emailConfirmationEnabled;
 
     @Override
     public void registerUser(CreateUserRequest createUserRequest) {
         String rawPassword = getPassword(createUserRequest);
+        String normalizedEmail = normalizeEmail(createUserRequest.email());
+
+        if (userRepository.existsByEmail(normalizedEmail)) {
+            throw new ConflictException("E-mail já cadastrado")
+                    .withField("email", "Este e-mail já está em uso.");
+        }
 
         if (userRepository.existsByEmail(createUserRequest.email())) {
             throw new ConflictException("E-mail já cadastrado")
@@ -74,6 +98,7 @@ public class UserServiceImpl implements UserService {
         } else {
             // Modo dev — sem confirmação
             AuthUser newUser = AuthUser.builder()
+                    .email(normalizedEmail)
                     .email(createUserRequest.email())
                     .username(createUserRequest.username())
                     .password(encoder.encode(rawPassword))

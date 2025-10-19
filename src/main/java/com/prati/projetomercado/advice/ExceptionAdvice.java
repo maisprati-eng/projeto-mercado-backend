@@ -10,6 +10,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.servlet.NoHandlerFoundException;
@@ -115,6 +116,21 @@ public class ExceptionAdvice {
                 .withFields(ex.getFieldErrors());
         return ResponseEntity.status(status).body(body);
     }
+
+    /* 400 - erros de validação dos DTOs anotados com @Valid */
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    public ResponseEntity<ErrorResponse> handleBeanValidation(MethodArgumentNotValidException ex, HttpServletRequest req) {
+        var body = new ErrorResponse(HttpStatus.BAD_REQUEST, "Validação falhou.", req.getRequestURI());
+
+        ex.getBindingResult().getFieldErrors().forEach(fe -> {
+            // fe.getField() -> nome do campo no DTO
+            // fe.getDefaultMessage() -> mensagem definida na anotação (ex.: "E-mail inválido.")
+            body.withField(fe.getField(), fe.getDefaultMessage());
+        });
+
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(body);
+    }
+
 
     /* 500 - fallback */
     @ExceptionHandler(Exception.class)
