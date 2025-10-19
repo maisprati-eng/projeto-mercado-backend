@@ -34,6 +34,8 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+import com.prati.projetomercado.exceptions.BadRequestException;
+
 @Service
 @RequiredArgsConstructor
 public class UserServiceImpl implements UserService {
@@ -57,9 +59,10 @@ public class UserServiceImpl implements UserService {
                     List.of(new FieldError("confirmPassword", "Passwords don't match"), new FieldError("password", "Passwords don't match")));
         }
 
-        if (createUserRequest.password().length() < 8) { // Ajustado para 8, conforme seu controller
-            throw new BadCredentialsException(List.of(new FieldError("password", "Min length: 8 characters")));
+        if (createUserRequest.password().length() < 6) {
+            throw new BadRequestException("A senha deve ter pelo menos 6 caracteres.");
         }
+
         // A NOVA LÓGICA CONDICIONAL INTERRUPTOR
         if (emailConfirmationEnabled) {
             // --- CENÁRIO 1: ENVIO DE E-MAIL LIGADO --- email.confirmation.enabled=true

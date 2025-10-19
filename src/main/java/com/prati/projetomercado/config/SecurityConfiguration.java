@@ -1,30 +1,39 @@
 package com.prati.projetomercado.config;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.prati.projetomercado.exceptions.ErrorResponse;
 import com.prati.projetomercado.filter.UserAutenticationFilter;
 import com.prati.projetomercado.security.oauth2.CustomOAuth2UserService;
 import com.prati.projetomercado.security.oauth2.HttpCookieOAuth2AuthorizationRequestRepository;
 import com.prati.projetomercado.security.oauth2.handlers.OAuth2AuthSuccessHandler;
 import com.prati.projetomercado.service.impl.UserDetailsServiceImpl;
-import org.springframework.beans.factory.annotation.Autowired;
+
+import jakarta.servlet.http.HttpServletResponse;
+
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
+
+import org.springframework.http.HttpStatus;
+
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
+
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
-import org.springframework.security.config.annotation.web.configurers.HeadersConfigurer;
-import org.springframework.security.config.http.SessionCreationPolicy;
+
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
+
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
-
 
 import java.util.List;
 
@@ -33,29 +42,28 @@ import java.util.List;
 public class SecurityConfiguration {
 
     public static final String[] PUBLIC_ENDPOINTS = {
-            "/auth/register",
-            "/auth/register/",
-            "/auth/login",
-            "/auth/login/",
-            "/auth/refresh-token",
-            "/auth/refresh-token/",
-            "/h2-console/**",
+            "/auth/**",
             "/oauth2/**",
             "/swagger-ui.html",
             "/swagger-ui/**",
             "/v3/api-docs/**",
-            "/auth/confirm-registration",
-            "/auth/confirm-registration/**"
+            "/h2-console/**"
     };
 
-    @Autowired
-    private UserAutenticationFilter userAutenticationFilter;
+    private final UserAutenticationFilter userAuthenticationFilter;
+    private final CustomOAuth2UserService customOAuth2UserService;
+    private final OAuth2AuthSuccessHandler oAuth2AuthSuccessHandler;
+    private final ObjectMapper objectMapper;
 
-    @Autowired
-    private CustomOAuth2UserService customOAuth2UserService;
-
-    @Autowired
-    private OAuth2AuthSuccessHandler oAuth2AuthSuccessHandler;
+    public SecurityConfiguration(UserAutenticationFilter userAuthenticationFilter,
+                             CustomOAuth2UserService customOAuth2UserService,
+                             OAuth2AuthSuccessHandler oAuth2AuthSuccessHandler,
+                             ObjectMapper objectMapper) {
+    this.userAuthenticationFilter = userAuthenticationFilter;
+    this.customOAuth2UserService = customOAuth2UserService;
+    this.oAuth2AuthSuccessHandler = oAuth2AuthSuccessHandler;
+    this.objectMapper = objectMapper;
+}
 
     @Bean
     public HttpCookieOAuth2AuthorizationRequestRepository cookieOAuth2AuthorizationRequestRepository() {
@@ -64,28 +72,55 @@ public class SecurityConfiguration {
 
     @Bean
     @Order(10)
-    public SecurityFilterChain securityFilterChain(HttpSecurity httpSecurity) throws Exception {
-        return httpSecurity
-                .csrf(AbstractHttpConfigurer::disable)
-                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-                .headers(HeadersConfigurer::disable)
-                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .authorizeHttpRequests(authorize -> authorize
+    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+        http
+                // H2 console precisa de frame e sem CSRF nesse path
+                .csrf(csrf -> csrf.ignoringRequestMatchers(new AntPathRequestMatcher("/h2-console/**"), new AntPathRequestMatcher("/auth/**")))
+                .headers(headers -> headers.frameOptions(frame -> frame.sameOrigin()))
+
+                .authorizeHttpRequests(auth -> auth
                         .requestMatchers(PUBLIC_ENDPOINTS).permitAll()
-                        .anyRequest().permitAll()
+                        .anyRequest().authenticated()
                 )
-                .addFilterBefore(userAutenticationFilter, UsernamePasswordAuthenticationFilter.class)
-                .oauth2Login(configurer -> configurer
-                        .authorizationEndpoint(endpoint -> endpoint
-                                .baseUri("/oauth2/authorize")
-                                .authorizationRequestRepository(cookieOAuth2AuthorizationRequestRepository()))
-                        .redirectionEndpoint(endpoint -> endpoint.baseUri("/oauth2/callback/*"))
-                        .userInfoEndpoint(endpoint -> endpoint.userService(customOAuth2UserService))
+
+                .oauth2Login(oauth2 -> oauth2
+                        .userInfoEndpoint(user -> user.userService(customOAuth2UserService))
                         .successHandler(oAuth2AuthSuccessHandler)
                 )
-                .build();
+
+                .exceptionHandling(ex -> ex
+                        .authenticationEntryPoint((req, res, authEx) -> {
+                            res.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                            res.setContentType("application/json;charset=UTF-8");
+                            var body = objectMapper.writeValueAsString(
+                                    new ErrorResponse(
+                                            HttpStatus.UNAUTHORIZED,
+                                            authEx.getMessage() != null ? authEx.getMessage() : "Token inválido ou expirado",
+                                            req.getRequestURI()
+                                    )
+                            );
+                            res.getWriter().write(body);
+                        })
+                        .accessDeniedHandler((req, res, denied) -> { // <--- 'denied' é o parâmetro certo
+                            res.setStatus(HttpServletResponse.SC_FORBIDDEN);
+                            res.setContentType("application/json;charset=UTF-8");
+                            var body = objectMapper.writeValueAsString(
+                                    new ErrorResponse(
+                                            HttpStatus.FORBIDDEN, // <--- 403 aqui
+                                            denied.getMessage() != null ? denied.getMessage() : "Acesso negado",
+                                            req.getRequestURI()
+                                    )
+                            );
+                            res.getWriter().write(body);
+                        })
+                )
+
+                .addFilterBefore(userAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+
+        return http.build();
     }
 
+    // CORS básico (ajuste origens conforme seu frontend)
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration corsConfiguration = new CorsConfiguration();
@@ -99,7 +134,6 @@ public class SecurityConfiguration {
         return source;
     }
 
-
     @Bean
     public AuthenticationManager authenticationManager(AuthenticationConfiguration authenticationConfiguration) throws Exception {
         return authenticationConfiguration.getAuthenticationManager();
@@ -111,7 +145,8 @@ public class SecurityConfiguration {
     }
 
     @Bean
-    public DaoAuthenticationProvider authenticationProvider(UserDetailsServiceImpl userDetailsService, PasswordEncoder passwordEncoder) {
+    public DaoAuthenticationProvider authenticationProvider(UserDetailsServiceImpl userDetailsService,
+                                                            PasswordEncoder passwordEncoder) {
         DaoAuthenticationProvider provider = new DaoAuthenticationProvider();
         provider.setUserDetailsService(userDetailsService);
         provider.setPasswordEncoder(passwordEncoder);
