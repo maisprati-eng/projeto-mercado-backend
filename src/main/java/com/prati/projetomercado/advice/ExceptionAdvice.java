@@ -28,7 +28,7 @@ public class ExceptionAdvice {
         public String message;
         public String path;
 
-        // campos extras (ex.: "password": "mensagem") aparecem no topo do JSON
+        // campos extras (ex.: "senha": "mensagem") aparecem no topo do JSON
         private final Map<String, Object> extras = new LinkedHashMap<>();
 
         ErrorResponse(HttpStatus status, String message, String path) {

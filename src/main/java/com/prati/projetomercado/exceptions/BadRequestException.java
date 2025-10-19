@@ -1,7 +1,10 @@
 package com.prati.projetomercado.exceptions;
 
+import lombok.Getter;
+
 import java.util.List;
 
+@Getter
 public class BadRequestException extends RuntimeException {
     private final List<FieldError> fieldErrors;
 
@@ -15,7 +18,4 @@ public class BadRequestException extends RuntimeException {
         this.fieldErrors = fieldErrors;
     }
 
-    public List<FieldError> getFieldErrors() {
-        return fieldErrors;
-    }
 }

@@ -52,23 +52,7 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public void registerUser(CreateUserRequest createUserRequest) {
-        String rawPassword = createUserRequest.password();
-
-        // Validação de senha curta
-        if (rawPassword == null || rawPassword.length() < 6) {
-            throw new BadRequestException(
-                    "Requisição inválida",
-                    List.of(new FieldError("password", "A senha deve ter pelo menos 6 caracteres."))
-            );
-        }
-
-        // Confirmação de senha
-        String confirm = createUserRequest.confirmPassword();
-        if (confirm != null && !rawPassword.equals(confirm)) {
-            throw new BadCredentialsException(
-                    List.of(new FieldError("confirmPassword", "As senhas não conferem."))
-            );
-        }
+        String rawPassword = getPassword(createUserRequest);
 
         // Fluxo normal de criação
         if (emailConfirmationEnabled) {
@@ -97,6 +81,27 @@ public class UserServiceImpl implements UserService {
 
             userRepository.save(newUser);
         }
+    }
+
+    private static String getPassword(CreateUserRequest createUserRequest) {
+        String rawPassword = createUserRequest.password();
+
+        // Validação de senha curta
+        if (rawPassword == null || rawPassword.length() < 6) {
+            throw new BadRequestException(
+                    "Requisição inválida",
+                    List.of(new FieldError("password", "A senha deve ter pelo menos 6 caracteres."))
+            );
+        }
+
+        // Confirmação de senha
+        String confirm = createUserRequest.confirmPassword();
+        if (confirm != null && !rawPassword.equals(confirm)) {
+            throw new BadCredentialsException(
+                    List.of(new FieldError("confirmPassword", "As senhas não conferem."))
+            );
+        }
+        return rawPassword;
     }
 
     @Override
