@@ -28,7 +28,8 @@ import jakarta.validation.Valid;
 @RestController
 @RequestMapping("/api/nfces")
 @RequiredArgsConstructor
-@Tag(name = "NFC-e", description = "Endpoints para processamento de Notas Fiscais de Consumidor Eletrônicas") // NOVO
+@Tag(name = "NFC-e",
+        description = "Endpoints para processamento de Notas Fiscais de Consumidor Eletrônicas")
 public class NfceController {
 
     private final NfceService nfceService;
