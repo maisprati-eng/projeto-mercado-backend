@@ -4,7 +4,6 @@ import com.prati.projetomercado.config.SecurityConfiguration;
 import com.prati.projetomercado.repository.AccessTokenRepository;
 import com.prati.projetomercado.service.impl.JwtTokenServiceImpl;
 import com.prati.projetomercado.service.impl.UserDetailsServiceImpl;
-import com.prati.projetomercado.utils.TokenUtils;
 
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -27,7 +26,7 @@ import java.util.List;
 
 @Component
 @RequiredArgsConstructor
-public class UserAutenticationFilter extends OncePerRequestFilter {
+public class UserAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtTokenServiceImpl jwtTokenService;
     private final UserDetailsServiceImpl userDetailsService;

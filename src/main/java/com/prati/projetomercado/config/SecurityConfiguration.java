@@ -2,7 +2,7 @@ package com.prati.projetomercado.config;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.prati.projetomercado.exceptions.ErrorResponse;
-import com.prati.projetomercado.filter.UserAutenticationFilter;
+import com.prati.projetomercado.filter.UserAuthenticationFilter;
 import com.prati.projetomercado.security.oauth2.CustomOAuth2UserService;
 import com.prati.projetomercado.security.oauth2.HttpCookieOAuth2AuthorizationRequestRepository;
 import com.prati.projetomercado.security.oauth2.handlers.OAuth2AuthSuccessHandler;
@@ -50,15 +50,15 @@ public class SecurityConfiguration {
             "/h2-console/**"
     };
 
-    private final UserAutenticationFilter userAuthenticationFilter;
+    private final UserAuthenticationFilter userAuthenticationFilter;
     private final CustomOAuth2UserService customOAuth2UserService;
     private final OAuth2AuthSuccessHandler oAuth2AuthSuccessHandler;
     private final ObjectMapper objectMapper;
 
-    public SecurityConfiguration(UserAutenticationFilter userAuthenticationFilter,
-                             CustomOAuth2UserService customOAuth2UserService,
-                             OAuth2AuthSuccessHandler oAuth2AuthSuccessHandler,
-                             ObjectMapper objectMapper) {
+    public SecurityConfiguration(UserAuthenticationFilter userAuthenticationFilter,
+                                 CustomOAuth2UserService customOAuth2UserService,
+                                 OAuth2AuthSuccessHandler oAuth2AuthSuccessHandler,
+                                 ObjectMapper objectMapper) {
     this.userAuthenticationFilter = userAuthenticationFilter;
     this.customOAuth2UserService = customOAuth2UserService;
     this.oAuth2AuthSuccessHandler = oAuth2AuthSuccessHandler;

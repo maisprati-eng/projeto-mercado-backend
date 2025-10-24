@@ -9,11 +9,7 @@ import com.prati.projetomercado.entity.Catalog;
 import com.prati.projetomercado.entity.Item;
 import com.prati.projetomercado.entity.Purchase;
 import com.prati.projetomercado.entity.Supermarket;
-import com.prati.projetomercado.exceptions.AuthException;
-import com.prati.projetomercado.exceptions.DuplicateNfceException;
-import com.prati.projetomercado.exceptions.EditNotAllowedException;
-import com.prati.projetomercado.exceptions.EntityNotFoundException;
-import com.prati.projetomercado.exceptions.UnauthorizedAccessException;
+import com.prati.projetomercado.exceptions.*;
 import com.prati.projetomercado.repository.AuthUserRepository;
 import com.prati.projetomercado.repository.CatalogRepository;
 import com.prati.projetomercado.repository.PurchaseRepository;
@@ -171,6 +167,14 @@ public class NfceService {
                 });
 
         Supermarket market;
+
+        if (nfceData.supermarket() == null) {
+            throw new BadRequestException("supermarket é obrigatório");
+        }
+
+        if (nfceData.products() == null || nfceData.products().isEmpty()) {
+            throw new BadRequestException("products é obrigatório e não pode ser vazio");
+        }
 
         if (nfceData.supermarket().id() != null) {
             market = supermarketRepo.findById(nfceData.supermarket().id())
