@@ -59,7 +59,7 @@ public class JwtTokenServiceImpl {
     }
 
     public Instant expirationAccessTokenDate() {
-        return ZonedDateTime.now(ZoneId.of("America/Sao_Paulo")).plusSeconds(5).toInstant();
+        return ZonedDateTime.now(ZoneId.of("America/Sao_Paulo")).plusHours(1).toInstant();
     }
 
     public RefreshToken generateNewRefreshToken(AuthUser user){

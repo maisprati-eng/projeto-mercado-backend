@@ -42,7 +42,10 @@ import java.util.List;
 public class SecurityConfiguration {
 
     public static final String[] PUBLIC_ENDPOINTS = {
-            "/auth/**",
+            "/auth/register",
+            "/auth/login",
+            "/auth/confirm-registration",
+            "/auth/refresh-token",
             "/oauth2/**",
             "/swagger-ui.html",
             "/swagger-ui/**",
