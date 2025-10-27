@@ -13,6 +13,8 @@ import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.util.Set;
 import java.util.HashSet;
+import com.auth0.jwt.interfaces.DecodedJWT;
+import com.auth0.jwt.exceptions.JWTDecodeException;
 
 
 @Service
@@ -57,7 +59,7 @@ public class JwtTokenServiceImpl {
     }
 
     public Instant expirationAccessTokenDate() {
-        return ZonedDateTime.now(ZoneId.of("America/Sao_Paulo")).plusHours(1).toInstant();
+        return ZonedDateTime.now(ZoneId.of("America/Sao_Paulo")).plusSeconds(5).toInstant();
     }
 
     public RefreshToken generateNewRefreshToken(AuthUser user){
@@ -75,6 +77,15 @@ public class JwtTokenServiceImpl {
 
     public boolean isTokenInvalid(String token) {
         return blacklist.contains(token);
+    }
+
+    public String getSubjectFromExpiredToken(String token) {
+        try {
+            DecodedJWT jwt = JWT.decode(token);
+            return jwt.getSubject();
+        } catch (JWTDecodeException exception){
+            throw new JWTVerificationException("Token inválido ou malformado.");
+        }
     }
 
 }
