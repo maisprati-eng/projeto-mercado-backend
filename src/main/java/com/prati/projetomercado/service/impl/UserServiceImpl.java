@@ -144,7 +144,7 @@ public class UserServiceImpl implements UserService {
     }
 
     private Optional<AuthUser> getAuthUser(String accessToken) {
-        var email = jwtTokenService.getSubjectFromToken(accessToken);
+        var email = jwtTokenService.getSubjectFromExpiredToken(accessToken);
         return userRepository.findByEmail(email);
 
 

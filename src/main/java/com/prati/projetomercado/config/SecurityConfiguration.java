@@ -34,11 +34,9 @@ public class SecurityConfiguration {
 
     public static final String[] PUBLIC_ENDPOINTS = {
             "/auth/register",
-            "/auth/register/",
             "/auth/login",
-            "/auth/login/",
+            "/auth/confirm-registration",
             "/auth/refresh-token",
-            "/auth/refresh-token/",
             "/h2-console/**",
             "/oauth2/**",
             "/swagger-ui.html",

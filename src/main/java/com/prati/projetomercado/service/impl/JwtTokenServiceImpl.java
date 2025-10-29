@@ -13,6 +13,8 @@ import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.util.Set;
 import java.util.HashSet;
+import com.auth0.jwt.interfaces.DecodedJWT;
+import com.auth0.jwt.exceptions.JWTDecodeException;
 
 
 @Service
@@ -75,6 +77,15 @@ public class JwtTokenServiceImpl {
 
     public boolean isTokenInvalid(String token) {
         return blacklist.contains(token);
+    }
+
+    public String getSubjectFromExpiredToken(String token) {
+        try {
+            DecodedJWT jwt = JWT.decode(token);
+            return jwt.getSubject();
+        } catch (JWTDecodeException exception){
+            throw new JWTVerificationException("Token inválido ou malformado.");
+        }
     }
 
 }
