@@ -14,10 +14,14 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import com.prati.projetomercado.dto.request.ChangePasswordRequest;
 import org.springframework.web.bind.annotation.*;
+import com.prati.projetomercado.dto.request.SearchRequestDTO;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import java.util.List;
 
 
 @RestController
-@RequestMapping("/api/user") // Define o caminho base para todos os endpoints de usuário
+@RequestMapping("/api/user")// Define o caminho base para todos os endpoints de usuário
 @RequiredArgsConstructor
 @Tag(name = "Usuário", description = "Endpoints para gerenciamento de informações do usuário")
 public class UserController {
@@ -48,6 +52,14 @@ public class UserController {
     public ResponseEntity<String> changePassword(@RequestBody ChangePasswordRequest request) {
         userService.changePassword(request);
         return ResponseEntity.ok("Senha alterada com sucesso.");
+    }
+
+    @PostMapping("/search")
+    @Operation(summary = "Busca usuários dinamicamente",
+            description = "Realiza uma busca avançada por usuários com base nos filtros fornecidos.")
+    public ResponseEntity<List<UserResponse>> searchUsers(@RequestBody SearchRequestDTO searchRequest) {
+        List<UserResponse> users = userService.searchUsers(searchRequest);
+        return ResponseEntity.ok(users);
     }
 
 }
