@@ -27,6 +27,11 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.prati.projetomercado.dto.request.SearchRequestDTO;
+import org.springframework.data.jpa.domain.Specification;
+import jakarta.persistence.criteria.Predicate;
+import java.util.ArrayList;
+import java.util.stream.Collectors;
 
 import java.time.Instant;
 import java.time.LocalDateTime;
@@ -260,5 +265,54 @@ public class UserServiceImpl implements UserService {
 
         // 5. Salva as alterações no banco de dados
         userRepository.save(user);
+    }
+
+    @Override
+    public List<UserResponse> searchUsers(SearchRequestDTO searchRequest) {
+
+        // 1. Criamos uma "Specification" (uma consulta dinâmica)
+        Specification<AuthUser> spec = (root, query, criteriaBuilder) -> {
+
+            // 2. Criamos uma lista de "predicados" (as condições WHERE)
+            List<Predicate> predicates = new ArrayList<>();
+
+            // 3. Adicionamos condições à lista APENAS SE o campo não for nulo
+
+            // Exemplo para "fullName" (usando LIKE)
+            if (searchRequest.fullName() != null) {
+                predicates.add(criteriaBuilder.like(
+                        criteriaBuilder.lower(root.get("username")), // Pega o campo 'username'
+                        "%" + searchRequest.fullName().toLowerCase() + "%" // Compara com o valor
+                ));
+            }
+
+            // Exemplo para "email" (usando equal)
+            if (searchRequest.email() != null) {
+                predicates.add(criteriaBuilder.equal(
+                        root.get("email"),
+                        searchRequest.email()
+                ));
+            }
+
+            // (Aqui você adicionaria a lógica para os outros campos...
+            // A lógica para 'ageRange' seria mais complexa,
+            // mas vamos focar nos campos de texto primeiro)
+
+            // 4. Combinamos todos os filtros com "AND"
+            return criteriaBuilder.and(predicates.toArray(new Predicate[0]));
+        };
+
+        // 5. Executamos a busca com a consulta dinâmica
+        List<AuthUser> usersFound = userRepository.findAll(spec);
+
+        // 6. Convertemos a lista de Entidades para DTOs de Resposta
+        return usersFound.stream()
+                .map(user -> new UserResponse(
+                        user.getId(),
+                        user.getUsername(),
+                        user.getEmail(),
+                        user.getCreationDate()
+                ))
+                .collect(Collectors.toList());
     }
 }

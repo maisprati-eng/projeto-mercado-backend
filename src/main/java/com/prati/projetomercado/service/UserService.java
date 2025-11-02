@@ -3,12 +3,14 @@ package com.prati.projetomercado.service;
 import com.prati.projetomercado.dto.request.ChangePasswordRequest;
 import com.prati.projetomercado.dto.request.CreateUserRequest;
 import com.prati.projetomercado.dto.request.LoginUserRequest;
+import com.prati.projetomercado.dto.request.SearchRequestDTO;
 import com.prati.projetomercado.dto.response.AuthResponse;
 import com.prati.projetomercado.dto.response.UserResponse;
 import com.prati.projetomercado.entity.AuthUser;
 import com.prati.projetomercado.model.JwtToken;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -35,4 +37,6 @@ public interface UserService {
     void changePassword(ChangePasswordRequest request);
 
     void confirmUser(String token);
+
+    List<UserResponse> searchUsers(SearchRequestDTO searchRequest);
 }
