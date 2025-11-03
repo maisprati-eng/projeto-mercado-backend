@@ -62,10 +62,9 @@ public class UserServiceImpl implements UserService {
                     List.of(new FieldError("confirmPassword", "Passwords don't match"), new FieldError("password", "Passwords don't match")));
         }
 
-        if (createUserRequest.password().length() < 8) { // Ajustado para 8, conforme seu controller
+        if (createUserRequest.password().length() < 8) { // Ajustado para 8, conforme controller
             throw new BadCredentialsException(List.of(new FieldError("password", "Min length: 8 characters")));
         }
-        // A NOVA LÓGICA CONDICIONAL INTERRUPTOR
         if (emailConfirmationEnabled) {
             // --- CENÁRIO 1: ENVIO DE E-MAIL LIGADO --- email.confirmation.enabled=true
             String confirmationToken = UUID.randomUUID().toString();
@@ -80,7 +79,7 @@ public class UserServiceImpl implements UserService {
             AuthUser savedUser = userRepository.save(newUser);
             emailService.sendConfirmationEmail(savedUser);
         } else {
-            // --- CENÁRIO 2: ENVIO DE E-MAIL DESLIGADO (MODO DEV) --- email.confirmation.enabled=false
+            // --- CENÁRIO 2: ENVIO DE E-MAIL DESLIGADO --- email.confirmation.enabled=false
             AuthUser newUser = AuthUser.builder()
                     .email(createUserRequest.email())
                     .username(createUserRequest.username())
@@ -232,7 +231,7 @@ public class UserServiceImpl implements UserService {
             throw new BadCredentialsException(List.of(new FieldError("confirmNewPassword", "A nova senha e a confirmação não conferem.")));
         }
 
-        // 4. (Opcional, mas recomendado) Adicionar validações para a nova senha.
+        // 4. (Opcional) Adicionar validações para a nova senha.
         if (request.newPassword().length() < 8) {
             throw new BadCredentialsException(List.of(new FieldError("newPassword", "A nova senha deve ter no mínimo 8 caracteres.")));
         }
@@ -294,9 +293,7 @@ public class UserServiceImpl implements UserService {
                 ));
             }
 
-            // (Aqui você adicionaria a lógica para os outros campos...
-            // A lógica para 'ageRange' seria mais complexa,
-            // mas vamos focar nos campos de texto primeiro)
+            //ageRange não implementada, funcionalidade mais avançada só criei campos de texto
 
             // 4. Combinamos todos os filtros com "AND"
             return criteriaBuilder.and(predicates.toArray(new Predicate[0]));
