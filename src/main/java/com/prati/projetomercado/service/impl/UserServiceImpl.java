@@ -63,7 +63,8 @@ public class UserServiceImpl implements UserService {
         }
 
         if (createUserRequest.password().length() < 8) { // Ajustado para 8, conforme controller
-            throw new BadCredentialsException(List.of(new FieldError("password", "Min length: 8 characters")));
+            
+        throw new BadCredentialsException(List.of(new FieldError("password", "Min length: 8 characters")));
         }
         if (emailConfirmationEnabled) {
             // --- CENÁRIO 1: ENVIO DE E-MAIL LIGADO --- email.confirmation.enabled=true
