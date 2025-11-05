@@ -18,6 +18,7 @@ import com.prati.projetomercado.repository.RefreshTokenRepository;
 import com.prati.projetomercado.service.EmailService;
 import com.prati.projetomercado.service.UserService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -36,6 +37,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class UserServiceImpl implements UserService {
@@ -100,7 +102,8 @@ public class UserServiceImpl implements UserService {
         try {
             authentication = authenticationManager.authenticate(usernamePasswordAuthenticationToken);
         } catch (Exception e) {
-            throw new AuthException("Auth manager error");
+            log.error(String.valueOf(e.fillInStackTrace()));
+            throw new AuthException("Usuário não encontrado");
         }
 
         var userDetailsImpl = (UserDetailsImpl) authentication.getPrincipal();

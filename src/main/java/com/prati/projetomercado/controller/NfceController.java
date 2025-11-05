@@ -1,5 +1,6 @@
 package com.prati.projetomercado.controller;
 
+import com.prati.projetomercado.dto.handlers.ResponseHandler;
 import com.prati.projetomercado.dto.request.NfcePatchRequest;
 import com.prati.projetomercado.dto.request.NfceRequest;
 import com.prati.projetomercado.dto.response.ErrorResponse;
@@ -49,13 +50,13 @@ public class NfceController {
             @ApiResponse(responseCode = "200", description = "Lista de notas fiscais retornada com sucesso")
     })
     @GetMapping()
-    public ResponseEntity<SuccessResponse<List<NfceResponse>>> getAllNfces(
+    public ResponseEntity<ResponseHandler<List<NfceResponse>>> getAllNfces(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size
     ) {
         Page<NfceResponse> data = nfceService.findAllByUser(page, size);
         PageResponse pageInfo = PageResponse.from(data);
-        return ResponseEntity.ok(new SuccessResponse<>("Notas fiscais encontradas com sucesso.", data.getContent(), pageInfo));
+        return ResponseEntity.ok(ResponseHandler.pageableSuccess("Notas fiscais encontradas com sucesso", data.getContent(), pageInfo));
     }
 
     @Operation(summary = "Busca uma nota fiscal pela chave de acesso",

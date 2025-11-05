@@ -1,6 +1,7 @@
 package com.prati.projetomercado.controller;
 
 
+import com.prati.projetomercado.dto.handlers.ResponseHandler;
 import com.prati.projetomercado.dto.request.CreateUserRequest;
 import com.prati.projetomercado.dto.request.LoginUserRequest;
 import com.prati.projetomercado.dto.request.RefreshTokenRequest;
@@ -44,7 +45,8 @@ public class AuthController {
         // A validação de senhas agora está corretamente no Service, mas podemos manter uma aqui se quisermos.
         // Por consistência, vamos confiar na lógica do Service.
         userService.registerUser(userRequest);
-        return ResponseEntity.ok("Solicitação de registro processada com sucesso!");
+
+        return ResponseEntity.ok(ResponseHandler.success("Solicitação de registro processada com sucesso!"));
     }
 
 
@@ -54,21 +56,21 @@ public class AuthController {
             @ApiResponse(responseCode = "401", description = "Credenciais inválidas ou conta não confirmada")
     })
     @PostMapping("/login")
-    public ResponseEntity<AuthResponse> login(@RequestBody LoginUserRequest userRequest) throws Exception {
+    public ResponseEntity<ResponseHandler<AuthResponse>> login(@RequestBody LoginUserRequest userRequest) throws Exception {
         var authResponse= userService.login(userRequest);
-        return new ResponseEntity<>(authResponse, HttpStatus.OK);
+        return ResponseEntity.ok(ResponseHandler.success("login realizado com sucesso", authResponse));
     }
 
     @Operation(summary = "Realiza o logout do usuário", description = "Invalida o token de acesso (JWT) atual do usuário, apagando-o do banco de dados.")
     @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "Logout realizado com sucesso")})
     @SecurityRequirement(name = "bearerAuth")
     @PostMapping("/logout")
-    public ResponseEntity<String> logout(
+    public ResponseEntity<ResponseHandler<Void>> logout(
             @Parameter(hidden = true)
             @RequestHeader("Authorization") String authorization) {
         String token = TokenUtils.recoveryToken(authorization);
         jwtTokenServiceImpl.invalidateToken(token); // Este método agora apaga o token do DB
-        return ResponseEntity.ok("Logout realizado com sucesso!");
+        return ResponseEntity.ok(ResponseHandler.success("Logout realizado com sucesso!"));
     }
 
 

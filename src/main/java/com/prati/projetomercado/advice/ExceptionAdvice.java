@@ -1,6 +1,6 @@
 package com.prati.projetomercado.advice;
 
-import com.prati.projetomercado.dto.response.ErrorResponse;
+import com.prati.projetomercado.dto.handlers.ResponseHandler;
 import com.prati.projetomercado.exceptions.AuthException;
 import com.prati.projetomercado.exceptions.BadCredentialsException;
 import com.prati.projetomercado.exceptions.DuplicateEntityException;
@@ -18,42 +18,41 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
 import com.prati.projetomercado.exceptions.EmailAlreadyExistsException;
-import org.springframework.http.HttpStatus;
 
 @RestControllerAdvice
 @Order(Ordered.HIGHEST_PRECEDENCE)
 public class ExceptionAdvice extends ResponseEntityExceptionHandler {
 
     @ExceptionHandler(Exception.class)
-    public ResponseEntity<Object> handleException(Exception ex) {
-        return ResponseEntity.status(500).body(new ErrorResponse(ex.getMessage()));
+    public ResponseEntity<ResponseHandler<Void>> handleException(Exception ex) {
+        return ResponseEntity.status(500).body(ResponseHandler.error(ex.getMessage()));
     }
 
     @ExceptionHandler(RuntimeException.class)
-    public ResponseEntity<Object> handleRuntimeException(Exception ex) {
-        return ResponseEntity.status(500).body(new ErrorResponse(ex.getMessage()));
+    public ResponseEntity<ResponseHandler<Void>> handleRuntimeException(Exception ex) {
+        return ResponseEntity.status(500).body(ResponseHandler.error(ex.getMessage()));
     }
 
     @ExceptionHandler(AuthException.class)
-    public ResponseEntity<Object> handleAuthException(Exception ex) {
-        return ResponseEntity.status(401).body(new ErrorResponse(ex.getMessage()));
+    public ResponseEntity<ResponseHandler<Void>> handleAuthException(AuthException ex) {
+        return ResponseEntity.status(401).body(ResponseHandler.error(ex.getMessage()));
     }
 
     @ExceptionHandler(BadCredentialsException.class)
-    public ResponseEntity<Object> handleBadCredentialsException(Exception ex) {
-        return ResponseEntity.status(401).body(new ErrorResponse(ex.getMessage()));
+    public ResponseEntity<ResponseHandler<Void>> handleBadCredentialsException(BadCredentialsException ex) {
+        return ResponseEntity.status(401).body(ResponseHandler.validationError(ex.fieldErrors));
     }
 
     @ExceptionHandler(UnauthorizedAccessException.class)
-    public ResponseEntity<ErrorResponse> handleUnauthorizedAccess(UnauthorizedAccessException ex) {
+    public ResponseEntity<ResponseHandler<Void>> handleUnauthorizedAccess(UnauthorizedAccessException ex) {
         return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                .body(new ErrorResponse(ex.getMessage()));
+                .body(ResponseHandler.error(ex.getMessage()));
     }
 
     @ExceptionHandler(EntityNotFoundException.class)
-    public ResponseEntity<ErrorResponse> handleEntityNotFound(EntityNotFoundException ex) {
+    public ResponseEntity<ResponseHandler<Void>> handleEntityNotFound(EntityNotFoundException ex) {
         return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                .body(new ErrorResponse(ex.getMessage()));
+                .body(ResponseHandler.error(ex.getMessage()));
     }
 
     @ExceptionHandler({
@@ -61,25 +60,24 @@ public class ExceptionAdvice extends ResponseEntityExceptionHandler {
             EntityDeletionException.class,
             NotManualEntityException.class
     })
-    public ResponseEntity<ErrorResponse> handleEntityConflictExceptions(RuntimeException ex) {
+    public ResponseEntity<ResponseHandler<Void>> handleEntityConflictExceptions(RuntimeException ex) {
         return ResponseEntity
                 .status(HttpStatus.CONFLICT)
-                .body(new ErrorResponse(ex.getMessage()));
+                .body(ResponseHandler.error(ex.getMessage()));
     }
 
     @ExceptionHandler({
             NfceScrapeException.class,
             NfceUrlParseException.class
     })
-    public ResponseEntity<ErrorResponse> handleNfceBadRequestExceptions(RuntimeException ex) {
+    public ResponseEntity<ResponseHandler<Void>> handleNfceBadRequestExceptions(RuntimeException ex) {
         return ResponseEntity
                 .status(HttpStatus.BAD_REQUEST)
-                .body(new ErrorResponse(ex.getMessage()));
+                .body(ResponseHandler.error(ex.getMessage()));
     }
 
     @ExceptionHandler(EmailAlreadyExistsException.class)
-    public ResponseEntity<ErrorResponse> handleEmailAlreadyExists(EmailAlreadyExistsException ex) {
-        ErrorResponse errorResponse = new ErrorResponse(ex.getMessage());
-        return new ResponseEntity<>(errorResponse, HttpStatus.CONFLICT);
+    public ResponseEntity<ResponseHandler<Void>> handleEmailAlreadyExists(EmailAlreadyExistsException ex) {
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(ResponseHandler.error(ex.getMessage()));
     }
 }
