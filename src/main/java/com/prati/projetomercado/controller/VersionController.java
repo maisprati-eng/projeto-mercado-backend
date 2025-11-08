@@ -1,4 +1,5 @@
-package com.prati.projetomercado.controller; import io.swagger.v3.oas.annotations.Operation; import io.swagger.v3.oas.annotations.responses.ApiResponse; import io.swagger.v3.oas.annotations.tags.Tag; import lombok.RequiredArgsConstructor;
+package com.prati.projetomercado.controller; import com.prati.projetomercado.dto.handlers.ResponseHandler;
+import io.swagger.v3.oas.annotations.Operation; import io.swagger.v3.oas.annotations.responses.ApiResponse; import io.swagger.v3.oas.annotations.tags.Tag; import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.info.BuildProperties;
 import org.springframework.http.ResponseEntity;
@@ -21,11 +22,11 @@ public class VersionController {
             description = "Verifica a versão definida no pom.xml do projeto.")
     @ApiResponse(responseCode = "200", description = "Versão retornada com sucesso")
     @GetMapping
-    public ResponseEntity<Map<String, String>> getVersion() {
+    public ResponseEntity<ResponseHandler<Map<String, String>>> getVersion() {
         Map<String, String> versionInfo = new HashMap<>();
         versionInfo.put("version", buildProperties.getVersion());
         versionInfo.put("buildTime", buildProperties.getTime().toString());
 
-        return ResponseEntity.ok(versionInfo);
+        return ResponseEntity.ok(ResponseHandler.success("Informações de versão", versionInfo));
     }
 }

@@ -1,5 +1,6 @@
 package com.prati.projetomercado.controller;
 
+import com.prati.projetomercado.dto.handlers.ResponseHandler;
 import com.prati.projetomercado.dto.request.CreateRascunhoRequest;
 import com.prati.projetomercado.dto.request.UpdateRascunhoRequest;
 import com.prati.projetomercado.dto.response.PageResponse;
@@ -35,9 +36,9 @@ public class RascunhoController {
             @ApiResponse(responseCode = "201", description = "Rascunho criado com sucesso"),
             @ApiResponse(responseCode = "401", description = "Acesso não autorizado")
     })
-    public ResponseEntity<SuccessResponse<RascunhoResponse>> criarRascunho(@RequestBody CreateRascunhoRequest request) {
+    public ResponseEntity<ResponseHandler<RascunhoResponse>> criarRascunho(@RequestBody CreateRascunhoRequest request) {
         RascunhoResponse response = rascunhoService.criarRascunho(request);
-        return ResponseEntity.status(HttpStatus.CREATED).body(new SuccessResponse<>("Rascunho criado com sucesso.", response));
+        return ResponseEntity.status(HttpStatus.CREATED).body(ResponseHandler.success("Rascunho criado com sucesso.", response));
     }
 
     @GetMapping
@@ -46,13 +47,13 @@ public class RascunhoController {
             @ApiResponse(responseCode = "200", description = "Lista de rascunhos retornada com sucesso"),
             @ApiResponse(responseCode = "401", description = "Acesso não autorizado")
     })
-    public ResponseEntity<SuccessResponse<List<RascunhoResponse>>> buscarRascunhosDoUsuario(
+    public ResponseEntity<ResponseHandler<List<RascunhoResponse>>> buscarRascunhosDoUsuario(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size
     ) {
         Page<RascunhoResponse> response = rascunhoService.buscarRascunhosDoUsuario(page, size);
         PageResponse pageInfo = PageResponse.from(response);
-        return ResponseEntity.ok(new SuccessResponse<>("Rascunhos encontrados com sucesso.", response.getContent(), pageInfo));
+        return ResponseEntity.ok(ResponseHandler.pageableSuccess("Rascunhos encontrados com sucesso.", response.getContent(), pageInfo));
     }
 
     @GetMapping("/{id}")
@@ -62,9 +63,9 @@ public class RascunhoController {
             @ApiResponse(responseCode = "404", description = "Rascunho não encontrado"),
             @ApiResponse(responseCode = "401", description = "Acesso não autorizado")
     })
-    public ResponseEntity<SuccessResponse<RascunhoResponse>> buscarRascunhoPorId(@PathVariable("id") Long rascunhoId) {
+    public ResponseEntity<ResponseHandler<RascunhoResponse>> buscarRascunhoPorId(@PathVariable("id") Long rascunhoId) {
         RascunhoResponse response = rascunhoService.buscarRascunhoPorId(rascunhoId);
-        return ResponseEntity.ok(new SuccessResponse<>("Rascunho encontrado com sucesso.", response));
+        return ResponseEntity.ok(ResponseHandler.success("Rascunho encontrado com sucesso.", response));
     }
 
     @PutMapping("/{id}")
@@ -74,9 +75,9 @@ public class RascunhoController {
             @ApiResponse(responseCode = "404", description = "Rascunho não encontrado"),
             @ApiResponse(responseCode = "401", description = "Acesso não autorizado")
     })
-    public ResponseEntity<SuccessResponse<RascunhoResponse>> atualizarRascunho(@PathVariable("id") Long rascunhoId, @RequestBody UpdateRascunhoRequest request) {
+    public ResponseEntity<ResponseHandler<RascunhoResponse>> atualizarRascunho(@PathVariable("id") Long rascunhoId, @RequestBody UpdateRascunhoRequest request) {
         RascunhoResponse response = rascunhoService.atualizarRascunho(rascunhoId, request);
-        return ResponseEntity.ok(new SuccessResponse<>("Rascunho editado com sucesso.", response));
+        return ResponseEntity.ok(ResponseHandler.success("Rascunho editado com sucesso.", response));
     }
 
     @DeleteMapping("/{id}")
@@ -88,6 +89,6 @@ public class RascunhoController {
     })
     public ResponseEntity<Void> apagarRascunho(@PathVariable("id") Long rascunhoId) {
         rascunhoService.apagarRascunho(rascunhoId);
-        return ResponseEntity.noContent().build(); // Retorna status 204 No Content, que é o padrão para DELETE bem-sucedido
+        return ResponseEntity.noContent().build();
     }
 }

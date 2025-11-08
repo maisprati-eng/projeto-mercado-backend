@@ -1,23 +1,18 @@
 package com.prati.projetomercado.advice;
 
 import com.prati.projetomercado.dto.handlers.ResponseHandler;
-import com.prati.projetomercado.exceptions.AuthException;
-import com.prati.projetomercado.exceptions.BadCredentialsException;
-import com.prati.projetomercado.exceptions.DuplicateEntityException;
-import com.prati.projetomercado.exceptions.EntityDeletionException;
-import com.prati.projetomercado.exceptions.EntityNotFoundException;
-import com.prati.projetomercado.exceptions.NfceScrapeException;
-import com.prati.projetomercado.exceptions.NfceUrlParseException;
-import com.prati.projetomercado.exceptions.NotManualEntityException;
-import com.prati.projetomercado.exceptions.UnauthorizedAccessException;
+import com.prati.projetomercado.exceptions.*;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.context.request.WebRequest;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
-import com.prati.projetomercado.exceptions.EmailAlreadyExistsException;
 
 @RestControllerAdvice
 @Order(Ordered.HIGHEST_PRECEDENCE)
@@ -41,6 +36,21 @@ public class ExceptionAdvice extends ResponseEntityExceptionHandler {
     @ExceptionHandler(BadCredentialsException.class)
     public ResponseEntity<ResponseHandler<Void>> handleBadCredentialsException(BadCredentialsException ex) {
         return ResponseEntity.status(401).body(ResponseHandler.validationError(ex.fieldErrors));
+    }
+
+    @Override
+    protected ResponseEntity<Object> handleMethodArgumentNotValid(MethodArgumentNotValidException ex, HttpHeaders headers, HttpStatusCode status, WebRequest request) {
+        System.out.println((ex.getParameter()));
+        System.out.println(ex.getBindingResult().getFieldErrors());
+        System.out.println(ex.getBindingResult().getGlobalErrors());
+        var fieldErrors
+         = ex.getBindingResult().getFieldErrors();
+
+        var formattedErrors = fieldErrors.stream().map(fieldError-> {
+            return new FieldError(fieldError.getField(), fieldError.getDefaultMessage());
+        }).toList();
+
+        return ResponseEntity.status(400).body(ResponseHandler.validationError(formattedErrors));
     }
 
     @ExceptionHandler(UnauthorizedAccessException.class)

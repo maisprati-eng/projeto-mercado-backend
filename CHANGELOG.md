@@ -1,7 +1,8 @@
 ## 0.0.2-SNAPSHOT
 
 ### Breaking changes
-- Refatora a resposta de sucesso dos controllers de autenticação.
+- 1 - Refatora a resposta de sucesso dos controllers de autenticação.
+- 2 - Atualiza mensagem de erro das rotas que necessitam de token de acesso
 
 Agr todas as requisições seguirão esse padrão:
 
@@ -54,4 +55,20 @@ Agr todas as requisições seguirão esse padrão:
 }
 ```
 
+### 2- Atualização do retorno das rotas que necessitam de JWT token
 
+agr essas rotas seguem esse padrão quando fizer uma request sem token:
+
+ANTES:
+```text
+Token inválido, expirado ou revogado.
+```
+
+AGORA:
+```json
+{
+  "status": "error",
+  "type": "defaultError",
+  "message": "Token inválido, expirado ou revogado."
+}
+```

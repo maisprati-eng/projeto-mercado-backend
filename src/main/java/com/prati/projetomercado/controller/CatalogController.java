@@ -1,5 +1,6 @@
 package com.prati.projetomercado.controller;
 
+import com.prati.projetomercado.dto.handlers.ResponseHandler;
 import com.prati.projetomercado.dto.response.CatalogResponse;
 import com.prati.projetomercado.dto.response.SuccessResponse;
 import com.prati.projetomercado.service.CatalogService;
@@ -7,6 +8,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -20,19 +22,21 @@ public class CatalogController {
     private final CatalogService catalogService;
 
     @GetMapping("/{id}")
-    public SuccessResponse<List<CatalogResponse>> getCatalogByMarket(@PathVariable("id") Long id) {
-        return new SuccessResponse<>("Catalogo retornado com sucesso", catalogService.getCatalogByMarket(id));
+    public ResponseEntity<com.prati.projetomercado.dto.handlers.SuccessResponse<List<CatalogResponse>>> getCatalogByMarket(@PathVariable("id") Long id) {
+        var response = catalogService.getCatalogByMarket(id);
+        return ResponseEntity.ok(ResponseHandler.success("Catalogo retornado com sucesso", response));
     }
 
     @DeleteMapping("/{id}")
-    public SuccessResponse<Void> deleteCatalog(@PathVariable("id") Long id) {
+    public ResponseEntity<ResponseHandler<Void>> deleteCatalog(@PathVariable("id") Long id) {
         catalogService.deleteCatalog(id);
-        return new SuccessResponse<>("Item do catalogo deletado com sucesso!", null);
+        return ResponseEntity.ok(ResponseHandler.success("item do catalogo deletado com sucesso!", null));
     }
 
     @PutMapping("/{id}")
-    public SuccessResponse<CatalogResponse> editCatalogItem(@PathVariable("id") Long id, @RequestBody NameRequest request) {
-        return new SuccessResponse<>("Catalogo editado com sucesso", catalogService.editCatalog(id, request.getName()));
+    public ResponseEntity<ResponseHandler<CatalogResponse>> editCatalogItem(@PathVariable("id") Long id, @RequestBody NameRequest request) {
+        var response = catalogService.editCatalog(id, request.getName());
+        return ResponseEntity.ok(ResponseHandler.success("Catalogo editado com sucesso", response));
     }
 
     @Getter

@@ -1,5 +1,6 @@
 package com.prati.projetomercado.controller;
 
+import com.prati.projetomercado.dto.handlers.ResponseHandler;
 import com.prati.projetomercado.dto.request.SupermarketRequest;
 import com.prati.projetomercado.dto.response.ErrorResponse;
 import com.prati.projetomercado.dto.response.PageResponse;
@@ -44,13 +45,13 @@ public class SupermarketController {
             @ApiResponse(responseCode = "200", description = "Lista de supermercados retornada com sucesso")
     })
     @GetMapping()
-    public ResponseEntity<SuccessResponse<List<SupermarketResponse>>> getAllSupermarkets(
+    public ResponseEntity<ResponseHandler<List<SupermarketResponse>>> getAllSupermarkets(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size
     ) {
         Page<SupermarketResponse> data = marketService.findAllByUser(page, size);
         PageResponse pageInfo = PageResponse.from(data);
-        return ResponseEntity.ok(new SuccessResponse<>("Supermercados encontrados com sucesso.", data.getContent(), pageInfo));
+        return ResponseEntity.ok(ResponseHandler.pageableSuccess("Supermercados encontrados com sucesso.", data.getContent(), pageInfo));
     }
 
     @Operation(summary = "Busca um supermercado pelo ID",
@@ -62,9 +63,9 @@ public class SupermarketController {
                             schema = @Schema(implementation = ErrorResponse.class))})
     })
     @GetMapping("/{id}")
-    public ResponseEntity<SuccessResponse<SupermarketResponse>> getSupermarket(@PathVariable long id) {
+    public ResponseEntity<ResponseHandler<SupermarketResponse>> getSupermarket(@PathVariable long id) {
         SupermarketResponse data = marketService.findById(id);
-        return ResponseEntity.ok(new SuccessResponse<>("Supermercado encontrado com sucesso.", data));
+        return ResponseEntity.ok(ResponseHandler.success("Supermercado encontrado com sucesso.", data));
     }
 
     @Operation(summary = "Cria um novo supermercado",
@@ -73,11 +74,11 @@ public class SupermarketController {
             @ApiResponse(responseCode = "201", description = "Supermercado criado com sucesso")
     })
     @PostMapping()
-    public ResponseEntity<SuccessResponse<SupermarketResponse>> createSupermarket(@RequestBody SupermarketRequest supermarketData) {
+    public ResponseEntity<ResponseHandler<SupermarketResponse>> createSupermarket(@RequestBody SupermarketRequest supermarketData) {
         SupermarketResponse data = marketService.create(supermarketData);
         return ResponseEntity
                 .status(HttpStatus.CREATED)
-                .body(new SuccessResponse<>("Supermercado cadastrado com sucesso.", data));
+                .body(ResponseHandler.success("Supermercado cadastrado com sucesso.", data));
 
     }
 
@@ -97,10 +98,10 @@ public class SupermarketController {
                             schema = @Schema(implementation = ErrorResponse.class))})
     })
     @PutMapping("/{id}")
-    public ResponseEntity<SuccessResponse<SupermarketResponse>> updateSupermarket(@PathVariable long id, @RequestBody SupermarketRequest supermarketData) {
+    public ResponseEntity<ResponseHandler<SupermarketResponse>> updateSupermarket(@PathVariable long id, @RequestBody SupermarketRequest supermarketData) {
         SupermarketResponse data = marketService.update(id, supermarketData);
 
-        return ResponseEntity.ok(new SuccessResponse<>("Supermercado editado com sucesso.", data));
+        return ResponseEntity.ok(ResponseHandler.success("Supermercado editado com sucesso.", data));
     }
 
     @Operation(summary = "Remove um supermercado",

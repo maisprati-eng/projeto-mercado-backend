@@ -1,5 +1,6 @@
 package com.prati.projetomercado.controller;
 
+import com.prati.projetomercado.dto.handlers.ResponseHandler;
 import com.prati.projetomercado.dto.response.UserResponse;
 import com.prati.projetomercado.service.UserService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -29,12 +30,10 @@ public class UserController {
             @ApiResponse(responseCode = "200", description = "Dados do usuário retornados com sucesso"),
             @ApiResponse(responseCode = "401", description = "Acesso não autorizado, token inválido ou ausente")
     })
-    @SecurityRequirement(name = "bearerAuth") // Marca este endpoint como protegido no Swagger
-    public ResponseEntity<UserResponse> getUserInfo() {
-        // Chama o método do serviço que implementamos
+    @SecurityRequirement(name = "bearerAuth")
+    public ResponseEntity<ResponseHandler<UserResponse>> getUserInfo() {
         UserResponse userInfo = userService.getUserInfo();
-        // Retorna os dados com um status 200 OK
-        return ResponseEntity.ok(userInfo);
+        return ResponseEntity.ok(ResponseHandler.success("Informações do usuário",userInfo));
     }
 
     @PutMapping("/change-password")
@@ -45,9 +44,9 @@ public class UserController {
             @ApiResponse(responseCode = "401", description = "Acesso não autorizado")
     })
     @SecurityRequirement(name = "bearerAuth")
-    public ResponseEntity<String> changePassword(@RequestBody ChangePasswordRequest request) {
+    public ResponseEntity<ResponseHandler<String>> changePassword(@RequestBody ChangePasswordRequest request) {
         userService.changePassword(request);
-        return ResponseEntity.ok("Senha alterada com sucesso.");
+        return ResponseEntity.ok(ResponseHandler.success("Senha alterada com sucesso."));
     }
 
 }

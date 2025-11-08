@@ -1,7 +1,9 @@
 package com.prati.projetomercado.filter;
 
 import com.auth0.jwt.exceptions.JWTVerificationException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.prati.projetomercado.config.SecurityConfiguration;
+import com.prati.projetomercado.dto.handlers.ResponseHandler;
 import com.prati.projetomercado.repository.AccessTokenRepository;
 import com.prati.projetomercado.service.impl.JwtTokenServiceImpl;
 import com.prati.projetomercado.service.impl.UserDetailsServiceImpl;
@@ -57,10 +59,9 @@ public class UserAuthenticationFilter extends OncePerRequestFilter {
             filterChain.doFilter(request, response);
 
         } catch (Exception e) {
-            // 3. CORREÇÃO: Responde 401 diretamente (evita o NullPointerException)
-            logger.error("Falha no filtro de segurança: " + e.getMessage());
             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-            response.getWriter().write("Token inválido, expirado ou revogado.");
+            response.setContentType("application/json");
+            response.getWriter().write(new ObjectMapper().writeValueAsString(ResponseHandler.error("Token inválido, expirado ou revogado.")));
             return;
         }
     }

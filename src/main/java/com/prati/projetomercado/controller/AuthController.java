@@ -81,12 +81,13 @@ public class AuthController {
     })
     @SecurityRequirement(name = "bearerAuth")
     @PostMapping("/refresh-token")
-    public ResponseEntity<JwtToken> refresh(
+    public ResponseEntity<ResponseHandler<JwtToken>> refresh(
             @Parameter(hidden = true)
             @RequestHeader String Authorization,
             @RequestBody RefreshTokenRequest refreshToken) throws Exception {
         var newJwtToken = userService.useRefreshToken(TokenUtils.recoveryToken(Authorization), UUID.fromString(refreshToken.refreshToken()));
-        return new ResponseEntity<>(newJwtToken, HttpStatus.OK);
+        return ResponseEntity.status(200).body(ResponseHandler.success("Novos tokens gerados com sucesso", newJwtToken));
+
     }
 
     @Operation(summary = "Endpoint de teste de autenticação", description = "Verifica se o token de acesso fornecido é válido.")
